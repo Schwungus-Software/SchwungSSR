@@ -1,21 +1,35 @@
 #include "SchwungSSR.hpp"
+#include <variant>
 
-void install_ssr_arg(SSR& ssr, const std::string& text) {
+static SSR::HtmlNode& expect_html(SSR& ssr) {
+    if (std::holds_alternative<SSR::HtmlNode>(ssr.node)) {
+        return std::get<SSR::HtmlNode>(ssr.node);
+    } else {
+        throw SSR_exception("Expected an HTML node, not a text node");
+    }
+}
+
+void install_ssr_arg(SSR& target, const std::string& text) {
     auto child = SSR();
-    child.text_content = text;
-    ssr.children.push_back(child);
+    child.node = SSR::TextNode(text);
+
+    auto& node = expect_html(target);
+    node.children.push_back(child);
 }
 
-void SSR::install(SSR& ssr) const {
-    ssr.children.push_back(*this);
+void SSR::install(SSR& target) const {
+    auto& node = expect_html(target);
+    node.children.push_back(*this);
 }
 
-void Elt::install(SSR& ssr) const {
-    ssr.elt_name = name;
+void Elt::install(SSR& target) const {
+    auto& node = expect_html(target);
+    node.elt_name = name;
 }
 
-void A::install(SSR& ssr) const {
-    ssr.attributes.insert_or_assign(attr, value);
+void A::install(SSR& target) const {
+    auto& node = expect_html(target);
+    node.attributes.insert_or_assign(attr, value);
 }
 
 static void escape(const std::string& input, std::stringstream& out) {
@@ -37,16 +51,23 @@ static void escape(const std::string& input, std::stringstream& out) {
     }
 }
 
-void SSR::render(std::stringstream& out) const {
-    if (elt_name.empty()) {
-        escape(text_content, out);
+void SSR::render(std::stringstream& out, bool root) const {
+    if (std::holds_alternative<TextNode>(node)) {
+        const auto& text_node = std::get<TextNode>(node);
+        escape(text_node.contents, out);
         return;
     }
 
-    out << "<";
-    escape(elt_name, out);
+    if (root) {
+        out << "<!DOCTYPE html>";
+    }
 
-    for (const auto& pair : attributes) {
+    const auto& html_node = std::get<HtmlNode>(node);
+
+    out << "<";
+    escape(html_node.elt_name, out);
+
+    for (const auto& pair : html_node.attributes) {
         out << " ";
 
         escape(pair.first, out);
@@ -59,11 +80,11 @@ void SSR::render(std::stringstream& out) const {
 
     out << ">";
 
-    for (const auto& child : children) {
-        child.render(out);
+    for (const auto& child : html_node.children) {
+        child.render(out, false);
     }
 
     out << "</";
-    escape(elt_name, out);
+    escape(html_node.elt_name, out);
     out << ">";
 }

@@ -21,7 +21,6 @@ int main(int, char**) {
     );
 
     std::stringstream out;
-    out << "<!DOCTYPE html>";
     page.render(out);
 
     std::cout << out.rdbuf() << std::endl;
