@@ -12,11 +12,16 @@ int main(int, char**) {
             meta(
                 A("name", "viewport"),
                 A("content", "width=device-width, initial-scale=1")
-            )
+            ),
+            style("body { margin: 0 auto; }")
         ),
         body(
-            h1("Hello, world!"), p("Damn, what an epic HTML page..."),
-            p("I wonder...", " Will it work with multiple text nodes?")
+            h1(C("hello"), S("color", "red"), "Hello, world!"),
+            p(S("color", "green"), S("background", "yellow"),
+              S("border", "1px solid black"),
+              "Damn, what an epic HTML page..."),
+            p(C("multiple"), C("classes"), "I wonder...",
+              " Will it work with multiple text nodes?")
         )
     );
 

@@ -79,6 +79,23 @@ struct A {
     void install(SSR&) const;
 };
 
+struct S {
+    const std::string attr, value;
+
+    S(const std::string& attr, const std::string& value)
+        : attr(attr), value(value) {}
+
+    void install(SSR&) const;
+};
+
+struct C {
+    const std::string clazz;
+
+    C(const std::string& clazz) : clazz(clazz) {}
+
+    void install(SSR&) const;
+};
+
 struct Href : public A {
     Href(const std::string& url) : A("href", url) {}
 };

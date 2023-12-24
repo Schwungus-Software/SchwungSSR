@@ -1,5 +1,6 @@
+#include <format>
+
 #include "SchwungSSR.hpp"
-#include <variant>
 
 static SSR::HtmlNode& expect_html(SSR& ssr) {
     if (std::holds_alternative<SSR::HtmlNode>(ssr.node)) {
@@ -32,8 +33,32 @@ void A::install(SSR& target) const {
     node.attributes.insert_or_assign(attr, value);
 }
 
-static void escape(const std::string& input, std::stringstream& out) {
-    for (auto c : input) {
+void S::install(SSR& target) const {
+    auto& node = expect_html(target);
+
+    const auto line = std::format("{}:{};", attr, value);
+
+    if (node.attributes.contains("style")) {
+        auto& style = node.attributes.at("style");
+        style += line;
+    } else {
+        node.attributes.insert_or_assign("style", line);
+    }
+}
+
+void C::install(SSR& target) const {
+    auto& node = expect_html(target);
+
+    if (node.attributes.contains("class")) {
+        auto& style = node.attributes.at("class");
+        style += " " + clazz;
+    } else {
+        node.attributes.insert_or_assign("class", clazz);
+    }
+}
+
+static void escape_html(const std::string& input, std::stringstream& out) {
+    for (const auto c : input) {
         switch (c) {
             case '<':
                 out << "&lt;";
@@ -51,10 +76,20 @@ static void escape(const std::string& input, std::stringstream& out) {
     }
 }
 
+static void escape_quote(const std::string& input, std::stringstream& out) {
+    for (const auto c : input) {
+        if (c == '"') {
+            out << "\\\"";
+        } else {
+            out << c;
+        }
+    }
+}
+
 void SSR::render(std::stringstream& out, bool root) const {
     if (std::holds_alternative<TextNode>(node)) {
         const auto& text_node = std::get<TextNode>(node);
-        escape(text_node.contents, out);
+        escape_html(text_node.contents, out);
         return;
     }
 
@@ -65,16 +100,16 @@ void SSR::render(std::stringstream& out, bool root) const {
     const auto& html_node = std::get<HtmlNode>(node);
 
     out << "<";
-    escape(html_node.elt_name, out);
+    escape_html(html_node.elt_name, out);
 
     for (const auto& pair : html_node.attributes) {
         out << " ";
 
-        escape(pair.first, out);
+        escape_html(pair.first, out);
         out << "=";
 
         out << "\"";
-        escape(pair.second, out);
+        escape_quote(pair.second, out);
         out << "\"";
     }
 
@@ -85,6 +120,6 @@ void SSR::render(std::stringstream& out, bool root) const {
     }
 
     out << "</";
-    escape(html_node.elt_name, out);
+    escape_html(html_node.elt_name, out);
     out << ">";
 }
